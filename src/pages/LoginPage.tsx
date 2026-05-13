@@ -2,9 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { AxiosError } from 'axios';
+
+interface AuthApiError {
+  detail?: string;
+  username?: string[];
+  non_field_errors?: string[];
+}
 
 // ─── Schema de validação ───────────────────────────────────────────────────────
 
@@ -25,7 +31,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { empresa } = useParams<{ empresa: string }>();
+  const { login, isAuthenticated, loading: authLoading, user } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,9 +47,12 @@ export const LoginPage: React.FC = () => {
   // Se já está autenticado, redireciona para dashboard
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      navigate('/dashboard');
+      const empresaAtual = user?.empresa ?? empresa;
+      if (empresaAtual) {
+        navigate(`/${empresaAtual}/dashboard`);
+      }
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, user, empresa]);
 
   // Se está carregando autenticação, mostra loader
   if (authLoading) {
@@ -60,18 +70,20 @@ export const LoginPage: React.FC = () => {
       setApiError(null);
       setIsSubmitting(true);
 
-      await login(data.username, data.password);
+      await login(data.username, data.password, empresa);
 
-      // Se chegou aqui, login foi sucesso
-      navigate('/dashboard');
+      const empresaDestino = user?.empresa ?? empresa;
+      if (empresaDestino) {
+        navigate(`/${empresaDestino}/dashboard`);
+      }
     } catch (error) {
       // Extrair mensagem de erro do axios
-      const axiosError = error as AxiosError<any>;
+      const axiosError = error as AxiosError<AuthApiError>;
       const msg =
         axiosError?.response?.data?.detail ||
         axiosError?.response?.data?.username?.[0] ||
         axiosError?.response?.data?.non_field_errors?.[0] ||
-        'Erro inesperado. Tente novamente.';
+        'Credenciais inválidas.';
 
       setApiError(msg);
     } finally {
@@ -151,25 +163,6 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-slate-300"></div>
-            <span className="px-3 text-sm text-slate-500">ou</span>
-            <div className="flex-1 border-t border-slate-300"></div>
-          </div>
-
-          {/* Signup Link */}
-          <div className="text-center">
-            <p className="text-slate-600 text-sm">
-              Ainda não tem conta?{' '}
-              <Link
-                to="/cadastro"
-                className="text-blue-600 hover:text-blue-700 font-medium transition"
-              >
-                Cadastre-se aqui
-              </Link>
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

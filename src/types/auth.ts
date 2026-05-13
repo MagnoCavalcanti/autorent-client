@@ -1,6 +1,7 @@
 export interface LoginRequest {
   username: string;
   password: string;
+  empresa?: string;
 }
 
 export interface LoginResponse {
@@ -8,17 +9,28 @@ export interface LoginResponse {
   refresh: string;
 }
 
+export interface EmpresaRequest {
+  nome: string;
+  cep: string;
+  telefone: string;
+  email: string;
+  cnpj: string;
+}
+
 export interface RegistroRequest {
   username: string;
   password: string;
-  nome_empresa: string;
+  empresa: EmpresaRequest;
 }
 
 export interface RegistroResponse {
   message: string;
   usuario: {
     username: string;
-    email: string;
+  };
+  empresa: {
+    nome: string;
+    slug: string;
   };
 }
 
@@ -34,15 +46,20 @@ export interface User {
   username: string;
   user_id: number;
   iat?: number;
-  exp?: number;  // ← adicionar ?
+  exp?: number;
+  empresa?: string;
 }
 
 export interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, empresa?: string) => Promise<void>;
   logout: () => void;
-  registro: (username: string, password: string, nome_empresa: string) => Promise<void>;
+  registro: (
+    username: string,
+    password: string,
+    empresa: EmpresaRequest
+  ) => Promise<RegistroResponse>;
   refreshToken: () => Promise<boolean>;
 }

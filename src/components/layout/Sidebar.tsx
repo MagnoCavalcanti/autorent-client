@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useParams } from 'react-router';
-import { Button } from './ui/button';
-import { Separator } from './ui/separator';
+import { Button } from '../ui/button';
+import { Separator } from '../ui/separator';
 import {
   Car,
   ClipboardList,
@@ -13,8 +13,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import api from '../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import api from '../../services/api';
 
 
 

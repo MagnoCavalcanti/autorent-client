@@ -4,8 +4,12 @@ import Index from './pages/Index';
 import LoginPage from './pages/LoginPage';
 import CadastroPage from './pages/CadastroPage';
 import DashboardPage from './pages/DashboardPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import Sidebar from './components/Sidebar';
+import CarrosPage from './pages/CarrosPage';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import Sidebar from './components/layout/Sidebar';
+import ClientesPage from './pages/ClientesPage';
+import VendedoresPage from './pages/VendedoresPage';
+import AlugueisPage from './pages/AlugueisPage';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,14 +22,6 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="p-6 md:p-8">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <p className="mt-2 text-zinc-400">Tela em construção.</p>
-    </div>
-  );
-}
 
 function App() {
   return (
@@ -45,7 +41,7 @@ function App() {
         path="/:empresa/carros"
         element={
           <ProtectedLayout>
-            <PlaceholderPage title="Carros" />
+            <CarrosPage />
           </ProtectedLayout>
         }
       />
@@ -53,7 +49,7 @@ function App() {
         path="/:empresa/clientes"
         element={
           <ProtectedLayout>
-            <PlaceholderPage title="Clientes" />
+            <ClientesPage />
           </ProtectedLayout>
         }
       />
@@ -61,7 +57,7 @@ function App() {
         path="/:empresa/vendedores"
         element={
           <ProtectedLayout>
-            <PlaceholderPage title="Vendedores" />
+            <VendedoresPage />
           </ProtectedLayout>
         }
       />
@@ -69,7 +65,7 @@ function App() {
         path="/:empresa/alugueis"
         element={
           <ProtectedLayout>
-            <PlaceholderPage title="Aluguéis" />
+            <AlugueisPage />
           </ProtectedLayout>
         }
       />

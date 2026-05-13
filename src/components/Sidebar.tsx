@@ -1,154 +1,204 @@
-import { useState, useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router';
+import { useEffect, useMemo, useState } from 'react';
+import { NavLink, useParams } from 'react-router';
+import { Button } from './ui/button';
+import { Separator } from './ui/separator';
 import {
-  KeyRound,
-  Users,
-  UserCheck,
   Car,
-  ChevronLeft,
-  ChevronRight,
+  ClipboardList,
+  LayoutDashboard,
   LogOut,
+  Menu,
+  UserCheck,
+  Users,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
 
-const navItems = [
-  { label: 'Aluguéis',   icon: KeyRound,   path: '/dashboard/alugueis' },
-  { label: 'Clientes',   icon: Users,      path: '/dashboard/clientes' },
-  { label: 'Vendedores', icon: UserCheck,  path: '/dashboard/vendedores' },
-  { label: 'Frota',      icon: Car,        path: '/dashboard/frota' },
-];
 
-function Tooltip({ label, children, disabled }: { label: string; children: React.ReactNode; disabled?: boolean }) {
-  const [visible, setVisible] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(0);
 
-  const show = () => {
-    if (disabled) return;
-    timer.current = setTimeout(() => setVisible(true), 300);
-  };
-  const hide = () => {
-    clearTimeout(timer.current);
-    setVisible(false);
-  };
+
+const expandedWidth = 'w-64';
+const collapsedWidth = 'w-20';
+
+function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const { empresa } = useParams<{ empresa: string }>();
+  const [empresaNome, setEmpresaNome] = useState<string>(empresa ?? ''); // ← adicionar
+
+  // Remover o navItems estático do topo do arquivo e montar aqui dentro:
+  const navItems = useMemo(() => [
+    { to: `/${empresa}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { to: `/${empresa}/carros`, label: 'Carros', icon: Car },
+    { to: `/${empresa}/clientes`, label: 'Clientes', icon: Users },
+    { to: `/${empresa}/vendedores`, label: 'Vendedores', icon: UserCheck },
+    { to: `/${empresa}/alugueis`, label: 'Aluguéis', icon: ClipboardList },
+  ], [empresa]);
+  
+  
+  useEffect(() => {
+    if (!empresa) return;
+  
+    api.get(`/empresas/${empresa}/`)
+      .then((res) => setEmpresaNome(res.data.nome))
+      .catch(() => setEmpresaNome(empresa)); // fallback para o slug se falhar
+  }, [empresa]);
+  
+
+
+  const widthClass = collapsed ? collapsedWidth : expandedWidth;
+  const username = user?.username ?? 'Usuário';
 
   return (
-    <div className="relative" onMouseEnter={show} onMouseLeave={hide}>
-      {children}
-      {visible && (
-        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 pointer-events-none">
-          <div className="bg-slate-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-            {label}
-            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
+    <>
+      <Button
+        variant="secondary"
+        aria-label="Abrir menu"
+        size="icon"
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-4 top-4 z-[60] border border-zinc-700 bg-zinc-900 text-zinc-100 md:hidden"
+      >
+        <Menu size={18} />
+      </Button>
+
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Fechar menu"
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={[
+          'fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-zinc-800 bg-zinc-900 text-zinc-100',
+          widthClass,
+          'transition-all duration-300 ease-in-out',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        ].join(' ')}
+      >
+        <div className="flex items-center justify-between px-3 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/90 text-white">
+              <Car size={18} />
+            </div>
+            {!collapsed && <span className="text-lg font-bold tracking-tight">AutoRent</span>}
+          </div>
+
+          <Button
+            size="icon"
+            variant="secondary"
+            aria-label={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+            onClick={() => setCollapsed((prev) => !prev)}
+            className="hidden text-zinc-300 hover:text-white md:inline-flex"
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </Button>
+        </div>
+
+        <div className="px-3 pb-4">
+          <div className="rounded-lg bg-zinc-800/70 px-3 py-2">
+            {!collapsed && (
+              <>
+                <p className="text-xs uppercase tracking-wide text-zinc-400">Empresa</p>
+                <p className="truncate text-sm font-medium text-zinc-100">{empresaNome}</p>
+              </>
+            )}
+            {collapsed && (
+              <p
+                title={empresaNome}
+                className="truncate text-center text-xs font-medium text-zinc-200"
+              >
+                EMP
+              </p>
+            )}
           </div>
         </div>
-      )}
-    </div>
-  );
-}
 
-export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+        <Separator className="bg-zinc-800" />
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+        <nav className="flex-1 space-y-1 px-3 py-4">
+          {navItems.map(({ to, label, icon: Icon }) => {
+            const link = (
+              <NavLink
+                to={to}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  [
+                    'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    collapsed ? 'justify-center' : 'gap-3',
+                    isActive
+                      ? 'bg-blue-500/20 text-blue-200 ring-1 ring-blue-500/40'
+                      : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100',
+                  ].join(' ')
+                }
+              >
+                <Icon size={18} className="shrink-0" />
+                {!collapsed && <span>{label}</span>}
+              </NavLink>
+            );
 
-  const initials = user?.username?.slice(0, 2).toUpperCase() ?? 'AU';
+            if (collapsed) {
+              return (
+                <div key={to} title={label}>
+                  {link}
+                </div>
+              );
+            }
 
-  return (
-    <aside
-      style={{ width: collapsed ? 72 : 240, transition: 'width 0.25s ease' }}
-      className="relative flex flex-col h-screen bg-white border-r border-slate-200 overflow-hidden flex-shrink-0"
-    >
-      {/* Logo */}
-      <div className="flex items-center h-16 px-4 border-b border-slate-100">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="flex-shrink-0 w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-            <Car size={18} className="text-white" />
+            return <div key={to}>{link}</div>;
+          })}
+        </nav>
+
+        <Separator className="bg-zinc-800" />
+
+        <div className="space-y-2 px-3 py-4">
+          <div
+            className={[
+              'rounded-lg bg-zinc-800/70 px-3 py-2',
+              collapsed ? 'text-center' : '',
+            ].join(' ')}
+          >
+            <p className="truncate text-xs uppercase tracking-wide text-zinc-400">Usuário</p>
+            {!collapsed && <p className="truncate text-sm font-medium text-zinc-100">{username}</p>}
+            {collapsed && (
+              <p
+                title={username}
+                className="truncate text-xs font-semibold text-zinc-100"
+              >
+                {username.slice(0, 2).toUpperCase()}
+              </p>
+            )}
           </div>
-          {!collapsed && (
-            <span className="text-xl font-black text-slate-900 whitespace-nowrap">
-              Autorent
-            </span>
+
+          {collapsed ? (
+            <Button
+              size="icon"
+              variant="secondary"
+              aria-label="Sair"
+              title="Sair"
+              onClick={logout}
+              className="w-full"
+            >
+              <LogOut size={16} />
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={logout}
+              className="w-full justify-start"
+            >
+              Sair
+            </Button>
           )}
         </div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-4 flex flex-col gap-1 px-2 overflow-hidden">
-        {navItems.map(({ label, icon: Icon, path }) => (
-          <Tooltip key={path} label={label} disabled={!collapsed}>
-            <NavLink
-              to={path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group w-full
-                ${isActive
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-200'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    size={20}
-                    className={`flex-shrink-0 transition ${
-                      isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-700'
-                    }`}
-                  />
-                  {!collapsed && (
-                    <span className="text-sm font-medium whitespace-nowrap">
-                      {label}
-                    </span>
-                  )}
-                </>
-              )}
-            </NavLink>
-          </Tooltip>
-        ))}
-      </nav>
-
-      {/* Footer / User */}
-      <div className="border-t border-slate-100 p-3 flex flex-col gap-1">
-        <Tooltip label={user?.username ?? ''} disabled={!collapsed}>
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 transition cursor-default">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center">
-              {initials}
-            </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">
-                  {user?.username}
-                </p>
-                <p className="text-xs text-slate-400">Administrador</p>
-              </div>
-            )}
-          </div>
-        </Tooltip>
-
-        <Tooltip label="Sair" disabled={!collapsed}>
-          <button
-            onClick={handleLogout}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition w-full ${
-              collapsed ? 'justify-center' : ''
-            }`}
-          >
-            <LogOut size={16} className="flex-shrink-0" />
-            {!collapsed && (
-              <span className="text-sm font-medium whitespace-nowrap">Sair</span>
-            )}
-          </button>
-        </Tooltip>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
+
+export default Sidebar;

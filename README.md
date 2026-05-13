@@ -1,73 +1,121 @@
-# React + TypeScript + Vite
+# Autorent Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação frontend de gerenciamento de locadora de veículos construída com React, TypeScript e Vite.
 
-Currently, two official plugins are available:
+## Visão geral
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+`autorent-client` é uma interface administrativa para empresas de locação de carros. A aplicação oferece autenticação JWT, dashboard com métricas, cadastros e gerenciamento de registros de carros, clientes, vendedores e aluguéis.
 
-## React Compiler
+## Principais funcionalidades
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Autenticação com login, armazenamento de `access` e `refresh token` em `localStorage`
+- Proteção de rotas privadas via `ProtectedRoute`
+- Dashboard com navegação corporativa para empresas
+- CRUD para:
+  - carros
+  - clientes
+  - vendedores
+  - aluguéis
+- Filtros de pesquisa e tabelas com edição e exclusão
+- Renovação automática de token quando expira
+- Uso de formulários e validação com `react-hook-form` e `zod`
 
-## Expanding the ESLint configuration
+## Tecnologias
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Axios
+- React Router
+- react-hook-form
+- Zod
+- Lucide React
+- JWT Decode
+- ESLint
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Estrutura do projeto
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `src/App.tsx` - definição das rotas e layout protegido
+- `src/main.tsx` - bootstrap da aplicação
+- `src/contexts/AuthContext.tsx` - contexto de autenticação e refresh token
+- `src/services/api.ts` - instância Axios com interceptors de auth
+- `src/pages/` - páginas do sistema
+- `src/components/` - componentes reutilizáveis e modais
+- `src/types/` - tipos TypeScript para dados de negócio
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Variáveis de ambiente
+
+A aplicação depende de uma variável de ambiente para a URL da API:
+
+- `VITE_API_URL` - endpoint base do backend
+
+No Vite, crie um arquivo `.env` na raiz do projeto com o conteúdo:
+
+```env
+VITE_API_URL=https://seu-backend.example.com/api
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Executando localmente
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Instale as dependências:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+2. Inicie o servidor de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+3. Acesse a aplicação no navegador através da URL exibida pelo Vite, normalmente `http://localhost:5173`.
+
+## Scripts disponíveis
+
+- `npm run dev` - inicia o servidor Vite em modo de desenvolvimento
+- `npm run build` - gera o build de produção
+- `npm run preview` - executa um servidor estático para pré-visualizar o build
+- `npm run lint` - executa o ESLint para verificar problemas de código
+
+## Rotas principais
+
+- `/` - página inicial
+- `/:empresa/login` - login da empresa
+- `/cadastro` - cadastro de empresa/usuário
+- `/:empresa/dashboard` - dashboard após login
+- `/:empresa/carros` - gestão de carros
+- `/:empresa/clientes` - gestão de clientes
+- `/:empresa/vendedores` - gestão de vendedores
+- `/:empresa/alugueis` - gestão de aluguéis
+
+## Requisitos do backend
+
+A aplicação espera uma API compatível com autenticação JWT, endpoints para login, refresh token e recursos REST:
+
+- `POST /auth/login/`
+- `POST /auth/token/refresh/`
+- `POST /auth/registro/`
+- `GET|POST|PATCH|DELETE /:empresa/carros/`
+- `GET|POST|PATCH|DELETE /:empresa/clientes/`
+- `GET|POST|PATCH|DELETE /:empresa/vendedores/`
+- `GET|POST|PATCH|DELETE /:empresa/alugueis/`
+
+## Boas práticas
+
+- Use `typescript` para tipos fortes em dados de API
+- Centralize a lógica de autenticação em `AuthContext`
+- Mantenha os interceptors Axios para renovação de token
+- Faça componentes UI reutilizáveis para modal, tabela e formulário
+
+## Contribuição
+
+1. Faça um fork do repositório
+2. Crie uma branch com a feature ou correção (`git checkout -b feature/nome`)
+3. Faça commit das alterações (`git commit -m "Descrição da mudança"`)
+4. Envie para o repositório remoto (`git push origin feature/nome`)
+
+## Licença
+
+Distribuído sob a licença MIT.

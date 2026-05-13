@@ -1,0 +1,184 @@
+import { useEffect, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import type { Cliente, ClienteFormData } from '../../types/cliente';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+
+const clienteSchema = z.object({
+  nome: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
+  cpf: z
+    .string()
+    .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF deve estar no formato 000.000.000-00'),
+  email: z.string().email('Email inválido'),
+  telefone: z
+    .string()
+    .regex(/^\(\d{2}\) \d{4,5}-\d{4}$/, 'Telefone deve estar no formato (00) 00000-0000'),
+  cep: z
+    .string()
+    .regex(/^\d{5}-\d{3}$/, 'CEP deve estar no formato 00000-000'),
+});
+
+interface ClienteFormModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: (data: ClienteFormData, cliente?: Cliente | null) => Promise<void>;
+  cliente?: Cliente | null;
+  loading?: boolean;
+  apiError?: string | null;
+}
+
+function formatCpf(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatTelefone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function formatCep(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+function ClienteFormModal({ open, onClose, onSuccess, cliente, loading = false, apiError = null }: ClienteFormModalProps) {
+  const isEdicao = useMemo(() => Boolean(cliente), [cliente]);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<ClienteFormData>({
+    resolver: zodResolver(clienteSchema),
+    defaultValues: {
+      nome: '',
+      cpf: '',
+      email: '',
+      telefone: '',
+      cep: '',
+    },
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    if (cliente) {
+      reset({
+        nome: cliente.nome,
+        cpf: cliente.cpf,
+        email: cliente.email,
+        telefone: cliente.telefone,
+        cep: cliente.cep,
+      });
+      return;
+    }
+    reset({
+      nome: '',
+      cpf: '',
+      email: '',
+      telefone: '',
+      cep: '',
+    });
+  }, [cliente, open, reset]);
+
+  const submit = async (data: ClienteFormData) => {
+    await onSuccess(data, cliente);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+        <DialogHeader>
+          <DialogTitle>{isEdicao ? 'Editar cliente' : 'Novo cliente'}</DialogTitle>
+          <DialogDescription>
+            {isEdicao
+              ? 'Atualize os dados do cliente.'
+              : 'Preencha os dados para cadastrar um novo cliente.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(submit)} className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="nome">Nome</Label>
+            <Input id="nome" {...register('nome')} />
+            {errors.nome && <p className="text-xs text-red-400">{errors.nome.message}</p>}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="cpf">CPF</Label>
+            <Input
+              id="cpf"
+              {...register('cpf')}
+              onChange={(event) => {
+                setValue('cpf', formatCpf(event.target.value), { shouldValidate: true });
+              }}
+            />
+            {errors.cpf && <p className="text-xs text-red-400">{errors.cpf.message}</p>}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...register('email')} />
+            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="telefone">Telefone</Label>
+              <Input
+                id="telefone"
+                {...register('telefone')}
+                onChange={(event) => {
+                  setValue('telefone', formatTelefone(event.target.value), { shouldValidate: true });
+                }}
+              />
+              {errors.telefone && <p className="text-xs text-red-400">{errors.telefone.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="cep">CEP</Label>
+              <Input
+                id="cep"
+                {...register('cep')}
+                onChange={(event) => {
+                  setValue('cep', formatCep(event.target.value), { shouldValidate: true });
+                }}
+              />
+              {errors.cep && <p className="text-xs text-red-400">{errors.cep.message}</p>}
+            </div>
+          </div>
+
+          {apiError && (
+            <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              {apiError}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default ClienteFormModal;

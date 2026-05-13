@@ -5,7 +5,6 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { fakerPT_BR as faker } from '@faker-js/faker';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 import type {
@@ -13,6 +12,8 @@ import type {
   User,
   LoginRequest,
   RegistroRequest,
+  EmpresaRequest,
+  RegistroResponse,
 } from '../types/auth';
 
 // ─── Tipos internos ────────────────────────────────────────────────────────────
@@ -22,6 +23,10 @@ interface JwtPayload {
   user_id: number;
   iat: number;
   exp: number;
+  empresa?: string;
+  nome_empresa?: string;
+  company?: string;
+  tenant?: string;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -36,34 +41,11 @@ interface AuthProviderProps {
 
 const KEYS = { access: 'access_token', refresh: 'refresh_token' } as const;
 
-const randomDigits = (length: number): string =>
-  Array.from({ length }, () => faker.number.int({ min: 0, max: 9 }).toString()).join('');
-
-const calculateCnpjDigit = (cnpj: string, weights: number[]): number => {
-  const sum = cnpj
-    .split('')
-    .reduce((acc, current, index) => acc + Number(current) * weights[index], 0);
-  const remainder = sum % 11;
-  return remainder < 2 ? 0 : 11 - remainder;
+const extractEmpresaFromPayload = (payload: JwtPayload): string | undefined => {
+  const empresa = payload.empresa ?? payload.nome_empresa ?? payload.company ?? payload.tenant;
+  return typeof empresa === 'string' && empresa.trim().length > 0 ? empresa : undefined;
 };
 
-const generateValidCnpj = (): string => {
-  const base = randomDigits(12);
-  const firstDigit = calculateCnpjDigit(base, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
-  const secondDigit = calculateCnpjDigit(
-    `${base}${firstDigit}`,
-    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-  );
-  const cnpj = `${base}${firstDigit}${secondDigit}`;
-  return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12)}`;
-};
-
-const generatePhoneNumber = (): string => {
-  const ddd = randomDigits(2);
-  const prefix = `9${randomDigits(4)}`;
-  const suffix = randomDigits(4);
-  return `(${ddd}) ${prefix}-${suffix}`;
-};
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -86,6 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user_id: decoded.user_id,
         iat: decoded.iat,
         exp: decoded.exp,
+        empresa: extractEmpresaFromPayload(decoded),
       };
     } catch (error) {
       console.error('Erro ao decodificar token:', error);
@@ -151,11 +134,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ── Login ────────────────────────────────────────────────────────────────────
 
   const login = useCallback(
-    async (username: string, password: string) => {
+    async (username: string, password: string, empresa?: string) => {
       // FIX: removido setLoading(true/false) — loading é só para boot inicial
       const response = await api.post<{ access: string; refresh: string }>(
         '/auth/login/',
-        { username, password } as LoginRequest
+        {
+          username,
+          password,
+          ...(empresa ? { empresa } : {}),
+        } as LoginRequest
       );
 
       const { access, refresh } = response.data;
@@ -172,20 +159,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ── Registro ─────────────────────────────────────────────────────────────────
 
   const registro = useCallback(
-    async (username: string, password: string, nome_empresa: string) => {
-      await api.post('/empresas/', {
-        nome: nome_empresa,
-        cep: faker.location.zipCode('#####-###'),
-        telefone: generatePhoneNumber(),
-        email: `contato+${faker.string.alphanumeric({ length: 8, casing: 'lower' })}@autorent.com`,
-        cnpj: generateValidCnpj(),
-      });
-
-      // FIX: removido setLoading(true/false) — loading é só para boot inicial
-      const response = await api.post('/auth/registro/', {
+    async (username: string, password: string, empresa: EmpresaRequest) => {
+      const response = await api.post<RegistroResponse>('/auth/registro/', {
         username,
         password,
-        nome_empresa,
+        empresa,
       } as RegistroRequest);
 
       return response.data;

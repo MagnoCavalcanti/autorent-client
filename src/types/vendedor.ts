@@ -5,3 +5,5 @@ export interface Vendedor {
   email: string;
   telefone: string;
 }
+
+export type VendedorFormData = Omit<Vendedor, 'id'>;

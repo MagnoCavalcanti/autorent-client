@@ -4,6 +4,6 @@ export interface Carro {
   modelo: string;
   ano: number;
   placa: string;
-  status: string;
+  status: 'disponivel' | 'indisponivel' | 'manutencao';
   preco_base_dia: string;
 }

@@ -2,9 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { AxiosError } from 'axios';
+
+interface AuthApiError {
+  detail?: string;
+  username?: string[];
+  non_field_errors?: string[];
+}
 
 // ─── Schema de validação ───────────────────────────────────────────────────────
 
@@ -17,10 +23,13 @@ const cadastroSchema = z.object({
     .string()
     .min(6, 'Senha deve ter no mínimo 6 caracteres')
     .nonempty('Senha é obrigatória'),
-  nome_empresa: z
-    .string()
-    .min(2, 'Nome da empresa deve ter no mínimo 2 caracteres')
-    .nonempty('Nome da empresa é obrigatório'),
+  empresa: z.object({
+    nome: z.string().min(2, 'Nome da empresa é obrigatório'),
+    cep: z.string().min(8, 'CEP inválido'),
+    telefone: z.string().min(10, 'Telefone inválido'),
+    email: z.string().email('Email inválido'),
+    cnpj: z.string().min(14, 'CNPJ inválido'),
+  }),
 });
 
 type CadastroFormData = z.infer<typeof cadastroSchema>;
@@ -49,17 +58,6 @@ export const CadastroPage: React.FC = () => {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Se há mensagem de sucesso, redireciona após alguns segundos
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage, navigate]);
-
   // Se está carregando autenticação, mostra loader
   if (authLoading) {
     return (
@@ -77,13 +75,16 @@ export const CadastroPage: React.FC = () => {
       setSuccessMessage(null);
       setIsSubmitting(true);
 
-      await registro(data.username, data.password, data.nome_empresa);
+      const result = await registro(data.username, data.password, data.empresa);
 
       // Se chegou aqui, registro foi sucesso
-      setSuccessMessage('Cadastro realizado com sucesso! Redirecionando para login...');
+      setSuccessMessage('Cadastro realizado com sucesso! Redirecionando...');
+      setTimeout(() => {
+        navigate(`/${result.empresa.slug}/login`);
+      }, 2000);
     } catch (error) {
       // Extrair mensagem de erro do axios
-      const axiosError = error as AxiosError<any>;
+      const axiosError = error as AxiosError<AuthApiError>;
       const msg =
         axiosError?.response?.data?.detail ||
         axiosError?.response?.data?.username?.[0] ||
@@ -151,26 +152,109 @@ export const CadastroPage: React.FC = () => {
               )}
             </div>
 
-            {/* Nome Empresa */}
+            {/* Nome da Empresa */}
             <div>
               <label
-                htmlFor="nome_empresa"
+                htmlFor="empresa.nome"
                 className="block text-sm font-medium text-slate-700 mb-2"
               >
                 Nome da Empresa
               </label>
               <input
-                {...register('nome_empresa')}
-                id="nome_empresa"
+                {...register('empresa.nome')}
+                id="empresa.nome"
                 type="text"
                 placeholder="Nome completo da sua empresa"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
-                  errors.nome_empresa ? 'border-red-500' : 'border-slate-300'
+                  errors.empresa?.nome ? 'border-red-500' : 'border-slate-300'
                 }`}
                 disabled={isSubmitting}
               />
-              {errors.nome_empresa && (
-                <p className="mt-1 text-sm text-red-600">{errors.nome_empresa.message}</p>
+              {errors.empresa?.nome && (
+                <p className="mt-1 text-sm text-red-600">{errors.empresa.nome.message}</p>
+              )}
+            </div>
+
+            {/* CEP */}
+            <div>
+              <label htmlFor="empresa.cep" className="block text-sm font-medium text-slate-700 mb-2">
+                CEP
+              </label>
+              <input
+                {...register('empresa.cep')}
+                id="empresa.cep"
+                type="text"
+                placeholder="00000000"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                  errors.empresa?.cep ? 'border-red-500' : 'border-slate-300'
+                }`}
+                disabled={isSubmitting}
+              />
+              {errors.empresa?.cep && (
+                <p className="mt-1 text-sm text-red-600">{errors.empresa.cep.message}</p>
+              )}
+            </div>
+
+            {/* Telefone */}
+            <div>
+              <label
+                htmlFor="empresa.telefone"
+                className="block text-sm font-medium text-slate-700 mb-2"
+              >
+                Telefone
+              </label>
+              <input
+                {...register('empresa.telefone')}
+                id="empresa.telefone"
+                type="text"
+                placeholder="11999999999"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                  errors.empresa?.telefone ? 'border-red-500' : 'border-slate-300'
+                }`}
+                disabled={isSubmitting}
+              />
+              {errors.empresa?.telefone && (
+                <p className="mt-1 text-sm text-red-600">{errors.empresa.telefone.message}</p>
+              )}
+            </div>
+
+            {/* Email da Empresa */}
+            <div>
+              <label htmlFor="empresa.email" className="block text-sm font-medium text-slate-700 mb-2">
+                Email da Empresa
+              </label>
+              <input
+                {...register('empresa.email')}
+                id="empresa.email"
+                type="email"
+                placeholder="contato@empresa.com"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                  errors.empresa?.email ? 'border-red-500' : 'border-slate-300'
+                }`}
+                disabled={isSubmitting}
+              />
+              {errors.empresa?.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.empresa.email.message}</p>
+              )}
+            </div>
+
+            {/* CNPJ */}
+            <div>
+              <label htmlFor="empresa.cnpj" className="block text-sm font-medium text-slate-700 mb-2">
+                CNPJ
+              </label>
+              <input
+                {...register('empresa.cnpj')}
+                id="empresa.cnpj"
+                type="text"
+                placeholder="00000000000000"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                  errors.empresa?.cnpj ? 'border-red-500' : 'border-slate-300'
+                }`}
+                disabled={isSubmitting}
+              />
+              {errors.empresa?.cnpj && (
+                <p className="mt-1 text-sm text-red-600">{errors.empresa.cnpj.message}</p>
               )}
             </div>
 
@@ -198,25 +282,6 @@ export const CadastroPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-slate-300"></div>
-            <span className="px-3 text-sm text-slate-500">ou</span>
-            <div className="flex-1 border-t border-slate-300"></div>
-          </div>
-
-          {/* Login Link */}
-          <div className="text-center">
-            <p className="text-slate-600 text-sm">
-              Já tem uma conta?{' '}
-              <Link
-                to="/login"
-                className="text-blue-600 hover:text-blue-700 font-medium transition"
-              >
-                Faça login aqui
-              </Link>
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
